@@ -8,6 +8,7 @@ import android.app.Activity;
 import android.app.AlarmManager;
 import android.app.Fragment;
 import android.app.PendingIntent;
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
@@ -32,6 +33,8 @@ public class MainActivity extends Activity {
 	private static final int SETACTIVITY = 1001;
 	private String text;
 	
+    
+	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -44,6 +47,7 @@ public class MainActivity extends Activity {
             getFragmentManager().beginTransaction()
                     .add(R.id.container, phf).commit();
         }
+        
 	}
 	
 	@Override
@@ -53,16 +57,22 @@ public class MainActivity extends Activity {
 				text = data.getStringExtra("keyword");
 				if(text.equals("alarm_set1")) {
 					phf.time1 = phf.searchByName(phf.db, "alarm_set1");
-					phf.isStartAlarm = false;
 					phf.startAlarm("alarm_set1",phf.isStartAlarm);	
+					phf.isStartAlarm = false;
+					phf.switch1.setChecked(true);
+					phf.isStartAlarm = true;
 				}else if(text.equals("alarm_set2")) {
 					phf.time2 = phf.searchByName(phf.db, "alarm_set2");
-					phf.isStartAlarm = false;
 					phf.startAlarm("alarm_set2",phf.isStartAlarm);
+					phf.isStartAlarm = false;
+					phf.switch2.setChecked(true);
+					phf.isStartAlarm = true;
 				}else if(text.equals("alarm_set3")) {
 					phf.time3 = phf.searchByName(phf.db, "alarm_set3");
-					phf.isStartAlarm = false;
 					phf.startAlarm("alarm_set3",phf.isStartAlarm);
+					phf.isStartAlarm = false;
+					phf.switch3.setChecked(true);
+					phf.isStartAlarm = true;
 				}
 			}
 		}
@@ -137,12 +147,12 @@ public class MainActivity extends Activity {
 	    private View rootView;
 	    private AlarmManager alarmManager;
 	    Calendar calendarAlarm;
-	    
-	    private MySQLiteHelper dbHelper = new MySQLiteHelper(getActivity().getApplication());
-        private SQLiteDatabase db = dbHelper.getReadableDatabase();
         private String name = "";
-        private int[] time1 = {0, 0}, time2 = {0, 0}, time3 = {0, 0};
         boolean isStartAlarm = true;
+        int[] time1 = {0, 0}, time2 = {0, 0}, time3 = {0, 0};
+        private MySQLiteHelper dbHelper;
+        private SQLiteDatabase db;
+        private String swi_name = "";
 		
 	    public PlaceholderFragment() {
 		}
@@ -153,7 +163,7 @@ public class MainActivity extends Activity {
 	            	rootView = inflater.inflate(R.layout.fragment_main,
 	            			container, false);
 	            	
-	            	//TextView current_time_text = (TextView) rootView.findViewById(R.id.current_time);
+	            	
 	            	alarmSetBtn1 = (Button) rootView.findViewById(R.id.alarm_set1);
 	            	alarmSetBtn2 = (Button) rootView.findViewById(R.id.alarm_set2);
 	            	alarmSetBtn3 = (Button) rootView.findViewById(R.id.alarm_set3);
@@ -167,12 +177,43 @@ public class MainActivity extends Activity {
 	                switch1.setOnCheckedChangeListener(this);
 	                switch2.setOnCheckedChangeListener(this);
 	                switch3.setOnCheckedChangeListener(this);
-	                time1 = searchByName(db, "alarm_set1");
-	                time2 = searchByName(db, "alarm_set2");
-	                time3 = searchByName(db, "alarm_set3");
 	                
 	            	return rootView;
 		}
+		@Override
+		public void onAttach(Activity act) {
+			super.onAttach(act);
+			dbHelper = new MySQLiteHelper(act.getApplication());
+			db = dbHelper.getWritableDatabase();
+			time1 = searchByName(db, "alarm_set1");
+	        time2 = searchByName(db, "alarm_set2");
+	        time3 = searchByName(db, "alarm_set3");
+	        if(searchByNameSwitch(db, "switch1") == true) {
+	        	isStartAlarm = false;
+	        	switch1.setChecked(true);
+	        	isStartAlarm = true;
+	        }else if(searchByNameSwitch(db, "switch1") == false){
+	        	switch1.setChecked(false);
+	        }
+	        if(searchByNameSwitch(db, "switch2")) {
+	        	isStartAlarm = false;
+	        	switch2.setChecked(true);
+	        	isStartAlarm = true;
+	        }else {
+	        	switch2.setChecked(false);
+	        }
+	        if(searchByNameSwitch(db, "switch3")) {
+	        	isStartAlarm = false;
+	        	switch3.setChecked(true);
+	        	isStartAlarm = true;
+	        }else {
+	        	switch3.setChecked(false);
+	        }
+	        
+	        
+		}
+		
+
 		
 		@Override
 		public void onClick(View v) {
@@ -196,18 +237,23 @@ public class MainActivity extends Activity {
 			switch(buttonView.getId()) {
 	        case R.id.switch1:
 	        	name = "alarm_set1";
+	        	swi_name = "switch1";
 	            break;
 	        case R.id.switch2:
 	        	name = "alarm_set2";
+	        	swi_name = "switch2";
 	            break;
 	        case R.id.switch3:
 	        	name = "alarm_set3";
+	        	swi_name = "switch3";
 	        }
 			
 			if(isChecked == true) {
+				updateEntry(db, swi_name, "on");
 				startAlarm(name, isStartAlarm);
 				isStartAlarm = true;
 			}else if(isChecked == false) {
+				updateEntry(db, swi_name, "off");
 				stopAlarm(name);
 			}
 			
@@ -226,9 +272,6 @@ public class MainActivity extends Activity {
 				calendarAlarm = Calendar.getInstance();
 				calendarAlarm.setTimeInMillis(System.currentTimeMillis());
 				if(name.equals("alarm_set1")) {
-					if(switch1.isChecked() == false) {
-						switch1.setChecked(true);
-					}
 					calendarAlarm.set(Calendar.HOUR_OF_DAY, time1[0]);
 			        calendarAlarm.set(Calendar.MINUTE, time1[1]);
 			        calendarAlarm.set(Calendar.SECOND, 0);
@@ -236,12 +279,8 @@ public class MainActivity extends Activity {
 			        alarmManager.set(AlarmManager.RTC_WAKEUP,
 		                    calendarAlarm.getTimeInMillis(),
 		                    getPendingIntent(name));
-					}
 			        
 				}else if(name.equals("alarm_set2")) {
-					if(switch2.isChecked() == false) {
-						switch2.setChecked(true);
-					}
 					calendarAlarm.set(Calendar.HOUR_OF_DAY, time2[0]);
 			        calendarAlarm.set(Calendar.MINUTE, time2[1]);
 			        calendarAlarm.set(Calendar.SECOND, 0);
@@ -250,11 +289,7 @@ public class MainActivity extends Activity {
 		                    calendarAlarm.getTimeInMillis(),
 		                    getPendingIntent(name));
 					
-			        
 				}else if(name.equals("alarm_set3")) {
-					if(switch1.isChecked() == false) {
-						switch1.setChecked(true);
-					}
 					calendarAlarm.set(Calendar.HOUR_OF_DAY, time3[0]);
 			        calendarAlarm.set(Calendar.MINUTE, time3[1]);
 			        calendarAlarm.set(Calendar.SECOND, 0);
@@ -265,6 +300,7 @@ public class MainActivity extends Activity {
 		                    getPendingIntent(name));
 					
 				}
+			}
 		}
 		
 		public void stopAlarm(String name) {
@@ -275,21 +311,21 @@ public class MainActivity extends Activity {
 	        if(name.equals("alarm_set1")) {
 	        	Intent intent1 = 
 		                new Intent(getActivity().getApplicationContext(), AlarmActivity.class);
-		        PendingIntent pendingIntent = 
+		        PendingIntent pendingIntent1 = 
 		                PendingIntent.getActivity(getActivity(), 0, intent1, 0);
-		        return pendingIntent;
+		        return pendingIntent1;
 	        }else if(name.equals("alarm_set2")) {
 	        	Intent intent2 = 
 		                new Intent(getActivity().getApplicationContext(), AlarmActivity.class);
-		        PendingIntent pendingIntent = 
+		        PendingIntent pendingIntent2 = 
 		                PendingIntent.getActivity(getActivity(), 0, intent2, 0);
-		        return pendingIntent;
+		        return pendingIntent2;
 	        }else {
 	        	Intent intent3 = 
 		                new Intent(getActivity().getApplicationContext(), AlarmActivity.class);
-		        PendingIntent pendingIntent = 
+		        PendingIntent pendingIntent3 = 
 		                PendingIntent.getActivity(getActivity(), 0, intent3, 0);
-		        return pendingIntent;
+		        return pendingIntent3;
 	        }
 	    }
 		
@@ -335,5 +371,62 @@ public class MainActivity extends Activity {
             }
             return result;
         }
+        
+        private boolean searchByNameSwitch(SQLiteDatabase db, String name){
+            // Cursorを確実にcloseするために、try{}～finally{}にする
+            Cursor cursor = null;
+            try{
+                // name_book_tableからnameとageのセットを検索する
+                // ageが指定の値であるものを検索
+                cursor = db.query("button", 
+                        new String[]{"onoff"}, 
+                        "switch = ?", new String[]{"" + name}, 
+                        null, null, null );
+ 
+                // 検索結果をcursorから読み込んで返す
+                return readCursorSwitch(cursor);
+            }
+            finally{
+                // Cursorを忘れずにcloseする
+                if( cursor != null ){
+                    cursor.close();
+                }
+            }
+        }
+ 
+ 
+        /** 検索結果の読み込み */
+        private boolean readCursorSwitch(Cursor cursor) {
+            boolean result = false;
+ 
+            // まず、Cursorからnameカラムとageカラムを
+            // 取り出すためのインデクス値を確認しておく
+            int indexOnOff = cursor.getColumnIndex("onoff");
+            
+ 
+            // ↓のようにすると、検索結果の件数分だけ繰り返される
+            while(cursor.moveToNext()){
+                // 検索結果をCursorから取り出す
+            	String onoff = cursor.getString(indexOnOff);
+                if(onoff.equals("on")) {
+                	result = true;
+                }else {
+                	result = false;
+                }
+            }
+            return result;
+        }
+        
+        
+        private void updateEntry(SQLiteDatabase db, String targetName, String onoff) {
+			ContentValues val = new ContentValues();
+            val.put("onoff", onoff);
+ 
+            
+            db.update("button", 
+                    val,
+                    "switch = ?",
+                    new String[]{"" + targetName});
+		}
 	}
 }
